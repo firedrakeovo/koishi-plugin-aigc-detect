@@ -1,0 +1,48 @@
+{
+  "name": "koishi-plugin-aigc-detect",
+  "version": "0.1.0",
+  "description": "AI 生成图片检测：发图或回复图片 + ai检测，判断图片是否由 AI 生成（目前支持 Sightengine，后续按需扩展其他服务商）",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "license": "MIT",
+  "author": "firedrakeovo",
+  "keywords": [
+    "chatbot",
+    "koishi",
+    "plugin",
+    "ai",
+    "aigc",
+    "image",
+    "detect",
+    "detection",
+    "sightengine"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/firedrakeovo/koishi-plugin-aigc-detect.git"
+  },
+  "homepage": "https://github.com/firedrakeovo/koishi-plugin-aigc-detect",
+  "bugs": {
+    "url": "https://github.com/firedrakeovo/koishi-plugin-aigc-detect/issues"
+  },
+  "scripts": {
+    "test": "node test/probe.js",
+    "test:live": "node test/probe-live.js"
+  },
+  "peerDependencies": {
+    "koishi": "^4.18.3"
+  },
+  "devDependencies": {
+    "koishi": "^4.18.11",
+    "koishi-plugin-adapter-onebot": "^6.9.4"
+  },
+  "koishi": {
+    "description": {
+      "zh": "AI 生成图片检测：发图或回复图片 + ai检测，判断图片是否由 AI 生成（目前支持 Sightengine）",
+      "en": "Detect AI-generated images: send or reply to an image with `ai检测` (currently Sightengine)"
+    }
+  }
+}

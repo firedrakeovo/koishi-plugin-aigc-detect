@@ -1,0 +1,19 @@
+# 依赖
+node_modules/
+
+# 密钥 / 本地配置：绝不提交
+koishi.yml
+.env
+.npmrc
+*.local
+
+# 运行数据与日志
+data/
+cache/
+logs/
+*.log
+
+# 编辑器 / 系统
+.DS_Store
+.idea/
+.vscode/
