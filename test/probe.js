@@ -90,7 +90,7 @@ async function run(app, { own, quote, userId = '654321', channelId = 'group:1234
   const sent = []
   const stripped = { content, prefix, appel: false, atSelf: false }
   const session = {
-    text: (k) => k, platform: 'onebot', channelId, userId,
+    text: (k) => k, platform: 'onebot', channelId, userId, messageId: '100',
     elements, bot: fakeBot, stripped,
     quote: dropQuoteContent ? { id: '200' } : event.quote,
     resolve: (v) => (typeof v === 'function' ? v({}) : v),
@@ -117,14 +117,14 @@ async function run(app, { own, quote, userId = '654321', channelId = 'group:1234
   // ① 普通：ai检测 + 图片（无空格）
   scoreMode = 'high'; netCalls = []
   let r = await run(app, { own: `ai检测${IMG('F1', 'R1')}` })
-  check('① ai检测 + 图片 → 合并转发 + 大概率结论', r.sent.length === 1 && r.sent[0].includes('<message forward>') && r.sent[0].includes('大概率是 AI 生成') && r.sent[0].includes('96%'), r.sent.join(' | ').slice(0, 200))
-  check('①b 转发里带原图与明细', r.sent[0].includes('mult.example.com') && r.sent[0].includes('原始分数：0.96') && r.sent[0].includes('仅供参考'))
+  check('① ai检测 + 图片 → 回复结论（默认普通消息 + 引用）', r.sent.length === 1 && r.sent[0].includes('大概率是 AI 生成') && r.sent[0].includes('96%') && r.sent[0].includes('<quote id="100"/>'), r.sent.join(' | ').slice(0, 200))
+  check('①b 结果里不再重复发送原图', !r.sent[0].includes('<img') && r.sent[0].includes('原始分数：0.96') && r.sent[0].includes('仅供参考'))
   check('①c 明细里带额度消耗', r.sent[0].includes('本次消耗：5 次额度'), r.sent[0].slice(0, 240))
 
   // ② 大写别名
   netCalls = []
   r = await run(app, { own: `AI检测 ${IMG('F2', 'R1')}` })
-  check('② AI检测（大写别名）+ 图片 → 触发', r.hit === 'ai检测' && r.sent.length === 1 && r.sent[0].includes('forward'), JSON.stringify(r.sent).slice(0, 160))
+  check('② AI检测（大写别名）+ 图片 → 触发', r.hit === 'ai检测' && r.sent.length === 1 && r.sent[0].includes('AI 生成概率'), JSON.stringify(r.sent).slice(0, 160))
 
   // ③ 严格格式：指令和图之间多打了文字 → 静默
   r = await run(app, { own: `ai检测 帮我看看这张${IMG('F3', 'R1')}` })
@@ -136,11 +136,11 @@ async function run(app, { own, quote, userId = '654321', channelId = 'group:1234
 
   // ④ 回复图片 + 只发指令（own 里带 [CQ:reply,id=200]，跟真实 QQ 回复一致）
   r = await run(app, { own: '[CQ:reply,id=200]ai检测', quote: IMG('F4', 'R1') })
-  check('④ 回复图片 + 只发 ai检测 → 触发', r.sent.length === 1 && r.sent[0].includes('forward'), JSON.stringify(r.sent).slice(0, 200))
+  check('④ 回复图片 + 只发 ai检测 → 触发', r.sent.length === 1 && r.sent[0].includes('AI 生成概率'), JSON.stringify(r.sent).slice(0, 200))
 
   // ④b 适配器没把被引用消息带进来 → 插件自己 getMessage 兜底
   r = await run(app, { own: '[CQ:reply,id=200]ai检测', quote: IMG('F4b', 'R1'), dropQuoteContent: true })
-  check('④b 适配器未带 quote.content → 自行 getMessage 兜底', r.sent.length === 1 && r.sent[0].includes('forward'), JSON.stringify(r.sent).slice(0, 200))
+  check('④b 适配器未带 quote.content → 自行 getMessage 兜底', r.sent.length === 1 && r.sent[0].includes('AI 生成概率'), JSON.stringify(r.sent).slice(0, 200))
 
   // ⑤ 回复图片 + 多打了字 → 静默
   r = await run(app, { own: '[CQ:reply,id=200]ai检测 谢谢', quote: IMG('F5', 'R1') })
@@ -196,7 +196,7 @@ async function run(app, { own, quote, userId = '654321', channelId = 'group:1234
   r = await run(appUserLimit, { own: `ai检测${IMG('F13', 'R1')}`, userId: '111' })
   check('⑬ 用户限额=1 → 第二次被拒', r.sent.length === 1 && r.sent[0].includes('额度用完') && r.sent[0].includes('每人'), JSON.stringify(r.sent).slice(0, 160))
   r = await run(appUserLimit, { own: `ai检测${IMG('F14', 'R1')}`, userId: '222' })
-  check('⑬b 换个人不受影响', r.sent.length === 1 && r.sent[0].includes('forward'))
+  check('⑬b 换个人不受影响', r.sent.length === 1 && r.sent[0].includes('AI 生成概率'))
 
   // ⑭ 群限额
   const appChLimit = await makeApp({ enableChannelLimit: true, dailyLimitPerChannel: 1 })
@@ -204,14 +204,14 @@ async function run(app, { own, quote, userId = '654321', channelId = 'group:1234
   r = await run(appChLimit, { own: `ai检测${IMG('F16', 'R1')}`, channelId: 'group:1' })
   check('⑭ 群限额=1 → 第二次被拒', r.sent.length === 1 && r.sent[0].includes('额度用完') && r.sent[0].includes('每群'), JSON.stringify(r.sent).slice(0, 160))
   r = await run(appChLimit, { own: `ai检测${IMG('F17', 'R1')}`, channelId: 'group:2' })
-  check('⑭b 换个群不受影响', r.sent.length === 1 && r.sent[0].includes('forward'))
+  check('⑭b 换个群不受影响', r.sent.length === 1 && r.sent[0].includes('AI 生成概率'))
 
   // ⑮ 默认不启用限额：连发 3 次都应正常
   const appNoLimit = await makeApp()
   let okCount = 0
   for (const f of ['G1', 'G2', 'G3']) {
     const rr = await run(appNoLimit, { own: `ai检测${IMG(f, 'R1')}`, userId: '333' })
-    if (rr.sent.length === 1 && rr.sent[0].includes('forward')) okCount++
+    if (rr.sent.length === 1 && rr.sent[0].includes('AI 生成概率')) okCount++
   }
   check('⑮ 默认不启用限额 → 连续 3 次都正常', okCount === 3, `okCount=${okCount}`)
 
@@ -233,8 +233,9 @@ async function run(app, { own, quote, userId = '654321', channelId = 'group:1234
   const appPlain = await makeApp({ forward: false })
   scoreMode = 'high'
   r = await run(appPlain, { own: `ai检测${IMG('I1', 'R1')}` })
-  check('⑱ forward=false → 发普通消息（不含 forward 标签）',
-    r.sent.length === 1 && !r.sent[0].includes('<message forward>') && r.sent[0].includes('大概率是 AI 生成') && r.sent[0].includes('原始分数'),
+  check('⑱ forward=false → 普通消息 + 引用本条消息 + 不含原图',
+    r.sent.length === 1 && !r.sent[0].includes('<message forward>') && r.sent[0].includes('<quote id="100"/>')
+      && !r.sent[0].includes('<img') && r.sent[0].includes('大概率是 AI 生成') && r.sent[0].includes('原始分数'),
     JSON.stringify(r.sent).slice(0, 200))
   const appFwd = await makeApp({ forward: true })
   r = await run(appFwd, { own: `ai检测${IMG('I2', 'R1')}` })
@@ -282,7 +283,7 @@ async function run(app, { own, quote, userId = '654321', channelId = 'group:1234
   scoreMode = 'high'
   netCalls = []
   r = await run(appBig, { own: `ai检测${IMG('K2', 'R1')}` })
-  check('㉒b 图片类失败不冷却通道 → 下一张仍用同一通道', netCalls.length === 1 && r.sent[0].includes('forward'), `netCalls=${netCalls.length}`)
+  check('㉒b 图片类失败不冷却通道 → 下一张仍用同一通道', netCalls.length === 1 && r.sent[0].includes('AI 生成概率'), `netCalls=${netCalls.length}`)
 
   // ㉓ 取不到图（media_error）
   scoreMode = 'media'
@@ -297,6 +298,19 @@ async function run(app, { own, quote, userId = '654321', channelId = 'group:1234
   check('㉔ 转发失败 → 自动用普通消息重发（含结论与明细）',
     r.sent.length === 1 && !r.sent[0].includes('<message forward>') && r.sent[0].includes('大概率是 AI 生成') && r.sent[0].includes('原始分数'),
     JSON.stringify(r.sent).slice(0, 240))
+
+  // ㉕ 触发方式决定引用谁：本条带图 → 引用本条；回复图片 → 引用那张原图所在的消息
+  const appQ = await makeApp({ forward: false })
+  scoreMode = 'high'
+  r = await run(appQ, { own: `ai检测${IMG('M1', 'R1')}` })
+  check('㉕ 本条消息带图 → 引用本条消息（id=100）', r.sent[0].includes('<quote id="100"/>') && !r.sent[0].includes('<img'), JSON.stringify(r.sent).slice(0, 160))
+  r = await run(appQ, { own: '[CQ:reply,id=200]ai检测', quote: IMG('M2', 'R1') })
+  check('㉕b 回复图片触发 → 引用被引用的那条消息（id=200）', r.sent[0].includes('<quote id="200"/>') && !r.sent[0].includes('<img'), JSON.stringify(r.sent).slice(0, 160))
+
+  // ㉖ 合并转发模式：节点里也不放原图（OneBot 转发无法同时带引用）
+  const appF = await makeApp({ forward: true })
+  r = await run(appF, { own: `ai检测${IMG('M3', 'R1')}` })
+  check('㉖ forward=true → 转发节点里不含原图', r.sent[0].includes('<message forward>') && !r.sent[0].includes('<img') && r.sent[0].includes('大概率是 AI 生成'), JSON.stringify(r.sent).slice(0, 200))
 
   console.log(`\n通过 ${pass}/${pass + fail}`)
   process.exit(fail ? 1 : 0)
