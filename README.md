@@ -21,7 +21,7 @@
 | 不带图、引用的也没有图 | ❌ 静默 |
 | `ai检测一下` + 图片 | ❌ 不触发（不是一个独立的词） |
 
-回复形式默认是**合并转发**两条记录（可用 `forward: false` 改成一条普通消息）：
+回复形式默认是**合并转发**两条记录（可用 `forward: false` 改成一条普通消息）。若适配器/账号发不出转发消息（例如 NapCat 返回 `retcode 1200`「发送转发消息失败」，多为 QQ 侧风控），插件会**自动降级成普通消息重发**，保证结果一定能看到：
 
 ```
 [原图]
@@ -108,7 +108,7 @@ AI 生成概率：96%
 
 ```bash
 npm install            # 安装 devDependencies（koishi、koishi-plugin-adapter-onebot）
-npm test               # 离线用例：打桩 Sightengine，35 条路径，不花钱
+npm test               # 离线用例：打桩 Sightengine，36 条路径，不花钱
 npm run test:live      # 真实接口冒烟（每张图消耗 5 次额度，需要下面的环境变量）
 ```
 
@@ -123,7 +123,7 @@ ln -s ../../koishi-app/node_modules/undici node_modules/undici
 ln -s ../../koishi-app/node_modules/koishi-plugin-adapter-onebot node_modules/koishi-plugin-adapter-onebot
 ```
 
-`test/probe.js` 走**真身** OneBot 适配器解码 + 真身 Argv 解析 + 真身 action，覆盖触发/静默、严格格式、引用兜底、缓存去重、三档阈值、密钥错误、额度耗尽降级、多通道优先级与冷却、图片类错误、限额、自检开关、回复样式等 **35 条路径**。
+`test/probe.js` 走**真身** OneBot 适配器解码 + 真身 Argv 解析 + 真身 action，覆盖触发/静默、严格格式、引用兜底、缓存去重、三档阈值、密钥错误、额度耗尽降级、多通道优先级与冷却、图片类错误、限额、自检开关、回复样式等 **36 条路径**。
 
 真实接口测试的密钥用**环境变量**传（不要把密钥写进任何文件）：
 

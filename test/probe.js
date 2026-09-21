@@ -79,7 +79,7 @@ const msgData = (id, raw) => ({
   post_type: 'message', time: Math.floor(Date.now() / 1000),
 })
 
-async function run(app, { own, quote, userId = '654321', channelId = 'group:123456', dropQuoteContent = false }) {
+async function run(app, { own, quote, userId = '654321', channelId = 'group:123456', dropQuoteContent = false, failForward = false }) {
   const store = { 100: msgData(100, own) }
   if (quote) store[200] = msgData(200, quote)
   fakeBot.internal.getMsg = async (id) => store[String(id)]
@@ -94,7 +94,14 @@ async function run(app, { own, quote, userId = '654321', channelId = 'group:1234
     elements, bot: fakeBot, stripped,
     quote: dropQuoteContent ? { id: '200' } : event.quote,
     resolve: (v) => (typeof v === 'function' ? v({}) : v),
-    send: async (m) => { sent.push(String(m)); return [] },
+    send: async (m) => {
+      const text = String(m)
+      if (failForward && text.includes('<message forward>')) {
+        throw new Error('Error with request send_group_forward_msg, retcode: 1200')
+      }
+      sent.push(text)
+      return []
+    },
   }
   const argv = { ...Argv.parse(prefix ? content.slice(prefix.length) : content), session, root: true }
   const hit = app.$commander.resolveCommand(argv)
@@ -282,6 +289,14 @@ async function run(app, { own, quote, userId = '654321', channelId = 'group:1234
   const appMedia = await makeApp()
   r = await run(appMedia, { own: `ai检测${IMG('K3', 'R1')}` })
   check('㉓ media_error → 提示重新发送图片', r.sent.length === 1 && r.sent[0].includes('重新发送'), JSON.stringify(r.sent).slice(0, 160))
+
+  // ㉔ 合并转发发送失败（NapCat retcode 1200）→ 自动降级为普通消息
+  scoreMode = 'high'
+  const appFb = await makeApp({ forward: true })
+  r = await run(appFb, { own: `ai检测${IMG('L1', 'R1')}`, failForward: true })
+  check('㉔ 转发失败 → 自动用普通消息重发（含结论与明细）',
+    r.sent.length === 1 && !r.sent[0].includes('<message forward>') && r.sent[0].includes('大概率是 AI 生成') && r.sent[0].includes('原始分数'),
+    JSON.stringify(r.sent).slice(0, 240))
 
   console.log(`\n通过 ${pass}/${pass + fail}`)
   process.exit(fail ? 1 : 0)
